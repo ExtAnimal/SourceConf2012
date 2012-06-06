@@ -110,24 +110,24 @@ Ext.onReady(function() {
             total = 0,
             start = new Date().getTime();
 
-        //for (var i = 0; i < 10000; i++) {
+        for (var i = 0; i < 10000; i++) {
             Ext.Array.each(r, function(rec) {
-                total += rec.get(menuItem.up('button').field);
+                total += rec.get(menuItem.up('[dataIndex]').dataIndex);
             });
-        //}
+        }
         Ext.Msg.alert(total + '', 'In ' + (new Date().getTime() - start) + 'ms');
     }
     Ext.goodTotalFn = function(menuItem) {
         var r = store.getRange(),
             total = 0,
-            field = menuItem.up('button').field,
+            field = menuItem.up('[dataIndex]').dataIndex,
             start = new Date().getTime();
 
-        //for (var i = 0; i < 10000; i++) {
+        for (var i = 0; i < 10000; i++) {
             for (var j = 0, l = r.length; j < l; j++) {
                 total += r[j].get(field);
             }
-        //}
+        }
         Ext.Msg.alert(total + '', 'In ' + (new Date().getTime() - start) + 'ms');
     }
     /**
@@ -163,9 +163,11 @@ Ext.onReady(function() {
     });
     
     var operationMenu = [{
+        itemId: 'badTotal',
         text: 'Get total in bad way',
         handler: Ext.badTotalFn
     }, {
+        itemId: 'goodTotal',
         text: 'Get total in good way',
         handler: Ext.goodTotalFn
     }];
@@ -177,70 +179,93 @@ Ext.onReady(function() {
         collapsible: true,
         multiSelect: true,
         stateId: 'stateGrid',
-        columns: [
-            {
-                text     : 'Company',
-                flex     : 1,
-                sortable : false,
-                dataIndex: 'company'
-            },
-            {
-                text     : 'Price',
-                width    : 75,
-                sortable : true,
-                renderer : 'usMoney',
-                dataIndex: 'price'
-            },
-            {
-                text     : 'Change',
-                width    : 75,
-                sortable : true,
-                renderer : change,
-                dataIndex: 'change'
-            },
-            {
-                text     : '% Change',
-                width    : 75,
-                sortable : true,
-                renderer : pctChange,
-                dataIndex: 'pctChange'
-            },
-            {
-                text     : 'Last Updated',
-                width    : 85,
-                sortable : true,
-                renderer : Ext.util.Format.dateRenderer('m/d/Y'),
-                dataIndex: 'lastChange'
-            },
-            {
-                menuDisabled: true,
-                sortable: false,
-                xtype: 'actioncolumn',
-                width: 50,
-                items: [{
-                    icon   : '../shared/icons/fam/delete.gif',  // Use a URL in the icon config
-                    tooltip: 'Sell stock',
-                    handler: function(grid, rowIndex, colIndex) {
-                        var rec = store.getAt(rowIndex);
-                        alert("Sell " + rec.get('company'));
-                    }
-                }, {
-                    getClass: function(v, meta, rec) {          // Or return a class from a function
-                        if (rec.get('change') < 0) {
-                            this.items[1].tooltip = 'Hold stock';
-                            return 'alert-col';
-                        } else {
-                            this.items[1].tooltip = 'Buy stock';
-                            return 'buy-col';
+        columns: {
+            items: [
+                {
+                    text     : 'Company',
+                    flex     : 1,
+                    sortable : false,
+                    dataIndex: 'company'
+                },
+                {
+                    text     : 'Price',
+                    width    : 75,
+                    sortable : true,
+                    renderer : 'usMoney',
+                    dataIndex: 'price'
+                },
+                {
+                    text     : 'Change',
+                    width    : 75,
+                    sortable : true,
+                    renderer : change,
+                    dataIndex: 'change'
+                },
+                {
+                    text     : '% Change',
+                    width    : 75,
+                    sortable : true,
+                    renderer : pctChange,
+                    dataIndex: 'pctChange'
+                },
+                {
+                    text     : 'Last Updated',
+                    width    : 85,
+                    sortable : true,
+                    renderer : Ext.util.Format.dateRenderer('m/d/Y'),
+                    dataIndex: 'lastChange'
+                },
+                {
+                    menuDisabled: true,
+                    sortable: false,
+                    xtype: 'actioncolumn',
+                    width: 50,
+                    items: [{
+                        icon   : '../shared/icons/fam/delete.gif',  // Use a URL in the icon config
+                        tooltip: 'Sell stock',
+                        handler: function(grid, rowIndex, colIndex) {
+                            var rec = store.getAt(rowIndex);
+                            alert("Sell " + rec.get('company'));
                         }
-                    },
-                    handler: function(grid, rowIndex, colIndex) {
-                        var rec = store.getAt(rowIndex);
-                        alert((rec.get('change') < 0 ? "Hold " : "Buy ") + rec.get('company'));
-                    }
-                }]
+                    }, {
+                        getClass: function(v, meta, rec) {          // Or return a class from a function
+                            if (rec.get('change') < 0) {
+                                this.items[1].tooltip = 'Hold stock';
+                                return 'alert-col';
+                            } else {
+                                this.items[1].tooltip = 'Buy stock';
+                                return 'buy-col';
+                            }
+                        },
+                        handler: function(grid, rowIndex, colIndex) {
+                            var rec = store.getAt(rowIndex);
+                            alert((rec.get('change') < 0 ? "Hold " : "Buy ") + rec.get('company'));
+                        }
+                    }]
+                }
+            ],
+            listeners: {
+                menucreate: function(headerCt, menu) {
+                    menu.add(operationMenu);
+                    menu.on({
+ 
+                        // Enable/disable statistical functions depending on whether column is numeric
+                        beforeshow: function() {
+                            var header = menu.up('[dataIndex]'),
+                                colType = grid.store.model.prototype.fields.get(header.dataIndex).type;
+
+                            if (colType === Ext.data.Types.FLOAT || colType === Ext.data.Types.INTEGER) {
+                                menu.down('#goodTotal').enable();
+                                menu.down('#badTotal').enable();
+                            } else {
+                                menu.down('#goodTotal').disable();
+                                menu.down('#badTotal').disable();
+                            }
+                        }
+                    })
+                }
             }
-        ],
+        },
         height: 350,
         width: 600,
         title: 'Array Grid',
@@ -248,16 +273,7 @@ Ext.onReady(function() {
         viewConfig: {
             stripeRows: true,
             enableTextSelection: true
-        },
-        tbar: [{
-            text: 'Price',
-            field: 'price',
-            menu: operationMenu
-        }, {
-            text: 'Change',
-            field: 'change',
-            menu: operationMenu
-        }]
+        }
     });
 });
 </script>
